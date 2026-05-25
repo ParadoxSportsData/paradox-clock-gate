@@ -17,6 +17,7 @@
       "git log:*",
       "git add:*",
       "git commit:*",
+      "git push:*",
       "git restore:*",
       "git init:*",
       "ln:*",

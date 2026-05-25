@@ -353,6 +353,24 @@ Phase gates (mandatory — no exceptions):
 
 `../paradox-platform` — the Python/TypeScript PoC this tool is derived from. Full dataset lives at `../paradox-platform/data/raw/` — not required for dev or demos (testdata/ ships in this repo). Do not modify that project.
 
+## GitHub Push Authentication
+
+**Account:** `aThatch73` (personal) — owns the `ParadoxSportsData` org. NOT `athatcher-asp` (work account — no access to this repo).
+
+**Method:** HTTPS remote + osxkeychain. Remote is `https://github.com/ParadoxSportsData/paradox-clock-gate.git`. Credentials stored in macOS keychain as `aThatch73` + PAT. Repo-level `credential.helper = osxkeychain` is set in `.git/config`.
+
+**Do NOT use SSH** — global SSH config loads `athatcher-asp` work key first; GitHub rejects it. Do NOT run `git config --global url.git@github.com:.insteadOf` — that redirects HTTPS back to SSH and breaks everything.
+
+**If push fails (PAT expired):**
+```bash
+printf 'protocol=https\nhost=github.com\nusername=aThatch73\npassword=NEW_PAT\n' | git credential-osxkeychain store
+git push
+```
+
+**GCM "No such file" warning** is noise from the broken global gitconfig — ignore it. Push succeeds via osxkeychain.
+
+---
+
 ## Plan File
 
 Full master plan: `~/.claude-work/plans/now-do-you-understand-rustling-sky.md`
