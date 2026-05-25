@@ -1,0 +1,90 @@
+{
+  "toolApprovals": {
+    "Bash": [
+      "go build:*",
+      "go test:*",
+      "go vet:*",
+      "go mod:*",
+      "go list:*",
+      "go run:*",
+      "mkdir:*",
+      "ls:*",
+      "grep:*",
+      "wc:*",
+      "find:*",
+      "git status:*",
+      "git diff:*",
+      "git log:*",
+      "git add:*",
+      "git commit:*",
+      "git restore:*",
+      "git init:*",
+      "ln:*",
+      "head:*",
+      "tail:*"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '\n=== clock-gate session end ===\nClaude must update before closing:\n  1. implementation_log.md  — what was done, decisions, benchmark numbers\n  2. ai_moments.md          — any new AI accepted/overridden moments\n  3. design_decisions.md    — any new architectural choices\n  4. continuous_improvement.md — any new flaws or trade-offs identified\nIf .go files changed without memory updates, that is a Claude failure.\n================================'",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'go test.*-bench\\|-bench.*go test'; then TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S'); OUTPUT=\"$CLAUDE_TOOL_RESULT\"; echo \"\\n## Benchmark Capture — $TIMESTAMP\\n\\`\\`\\`\\n$OUTPUT\\n\\`\\`\\`\" >> /Users/athatcher/.claude-work/projects/-Users-athatcher-Documents-at-proj-paradox-clock-gate/memory/implementation_log.md; if echo \"$OUTPUT\" | grep -E '[1-9][0-9]* allocs/op' > /dev/null 2>&1; then echo 'REGRESSION: BenchmarkQuery shows non-zero allocations. Core zero-alloc claim violated. Fix before proceeding.'; fi; fi",
+            "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'go (mod|get)'; then COUNT=$(go list -m all 2>/dev/null | wc -l | tr -d ' '); if [ \"$COUNT\" -gt 1 ]; then echo \"CONSTRAINT VIOLATION: external dependency detected ($COUNT modules). clock-gate must be zero-dependency. Run 'go mod tidy' to inspect and remove.\"; fi; fi",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'git commit'; then if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'PDX-[0-9]+'; then if ! echo \"$CLAUDE_TOOL_INPUT\" | grep -qF '[RED]' && ! echo \"$CLAUDE_TOOL_INPUT\" | grep -qF '[GREEN]'; then echo 'COMMIT FORMAT GATE: PDX-N commits must include [RED] or [GREEN] tag. Run commit-ticket skill.'; exit 1; fi; if echo \"$CLAUDE_TOOL_INPUT\" | grep -qF '[RED]'; then NON_TEST=$(git diff --name-only --cached 2>/dev/null | grep '\\.go$' | grep -v '_test\\.go$' || true); if [ -n \"$NON_TEST\" ]; then echo 'RED COMMIT GATE: Non-test Go files staged — write-order evidence destroyed:'; echo \"$NON_TEST\"; exit 1; fi; echo 'RED COMMIT GATE: Only *_test.go files staged — OK'; else if ! go test ./... > /tmp/clock-gate-test-output.txt 2>&1; then echo 'GREEN COMMIT GATE: Tests failing — commit blocked:'; cat /tmp/clock-gate-test-output.txt; exit 1; fi; fi; else if ! go test ./... > /tmp/clock-gate-test-output.txt 2>&1; then echo 'PRE-COMMIT GATE: Tests failing — commit blocked:'; cat /tmp/clock-gate-test-output.txt; exit 1; fi; fi; fi",
+            "timeout": 60000
+          },
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'git commit'; then STAGED=$(git diff --cached --name-only 2>/dev/null); GO_CHANGED=$(echo \"$STAGED\" | grep -c '\\.go$' || true); README_STAGED=$(echo \"$STAGED\" | grep -c 'README' || true); if [ \"$GO_CHANGED\" -gt 0 ] && [ \"$README_STAGED\" -eq 0 ]; then echo 'README CHECK: .go files are staged but README.md is not. If CLI flags, commands, or output format changed, invoke readme-sync skill before committing.'; fi; if echo \"$STAGED\" | xargs grep -lE '(api_key|secret|password|token|private_key)[[:space:]]*[:=]|[A-Za-z0-9+/]{40,}={0,2}' 2>/dev/null | grep -v '.git'; then echo 'SECRETS SCAN: potential credential pattern detected in staged files. Review before committing.'; exit 1; fi; fi",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "TARGET=$(echo \"$CLAUDE_TOOL_INPUT\" | grep -o '\"file_path\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | grep -o '\"[^\"]*\"$' | tr -d '\"'); PROJECT_ROOT=\"/Users/athatcher/Documents/at-proj/paradox-clock-gate\"; RESOLVED=$(python3 -c \"import os; print(os.path.realpath('$TARGET'))\" 2>/dev/null || echo \"$TARGET\"); if [ -n \"$RESOLVED\" ] && ! echo \"$RESOLVED\" | grep -q \"^$PROJECT_ROOT\" && ! echo \"$RESOLVED\" | grep -q \"^/Users/athatcher/.claude-work\"; then echo \"SCOPE VIOLATION: Write target '$TARGET' is outside project root. Sibling repos (../paradox-platform) are off-limits.\"; exit 1; fi",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "TARGET=$(echo \"$CLAUDE_TOOL_INPUT\" | grep -o '\"file_path\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | grep -o '\"[^\"]*\"$' | tr -d '\"'); if echo \"$TARGET\" | grep -qE '\\.claude/skills/.+/SKILL\\.md' && ! echo \"$TARGET\" | grep -q 'skill-builder/SKILL.md'; then echo '⚠ SKILL-BUILDER GATE: You are writing to a project skill file. STOP if skill-builder 5-phase process (Phase 1 outcome, Phase 1b anchors, Phase 2 killer items, Phase 3 draft, Phase 4 quality tests, Phase 5 compliance) has not been completed and documented in this conversation. The Iron Law: do not write a single line of the skill until all phases are complete. Skill-builder import/copy is the only exception.'; fi",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
