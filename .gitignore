@@ -1,8 +1,8 @@
 # MCP config — contains credentials, never commit
 .mcp.json
 
-# Build output
-clock-gate
+# Build output — root-anchored so it doesn't match cmd/clock-gate/
+/clock-gate
 
 # Test artifacts
 /tmp/clock-gate-test-output.txt
