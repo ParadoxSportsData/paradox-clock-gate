@@ -46,12 +46,12 @@ go test -bench=BenchmarkQuery -benchmem ./internal/matrix/
 go vet ./...
 
 # Smoke tests (run from repo root after building)
-./clock-gate --tick 0 ../paradox-platform/data/raw/2011_01_ATL_CHI.json     # kickoff
-./clock-gate --tick 1800 ../paradox-platform/data/raw/2011_01_ATL_CHI.json  # halftime
-./clock-gate --tick 3599 ../paradox-platform/data/raw/2011_01_ATL_CHI.json  # late game
-./clock-gate --tick 900 --format json ../paradox-platform/data/raw/2011_01_ATL_CHI.json
-./clock-gate --tick 999999 ../paradox-platform/data/raw/2011_01_ATL_CHI.json  # expect error
-./clock-gate --list ../paradox-platform/data/raw/
+./clock-gate --tick 0 testdata/2011_01_NO_GB.json      # kickoff
+./clock-gate --tick 1800 testdata/2011_01_NO_GB.json   # halftime
+./clock-gate --tick 3599 testdata/2011_01_NO_GB.json   # late game
+./clock-gate --tick 900 --format json testdata/2011_01_NO_GB.json
+./clock-gate --tick 999999 testdata/2011_01_NO_GB.json  # expect error
+./clock-gate --list testdata/
 ```
 
 ---
@@ -72,7 +72,7 @@ paradox-clock-gate/
 │   │   └── gate.go               # Validate(tick, maxTick) — bounds + containment
 │   └── presenter/
 │       └── snapshot.go           # RenderText(GameState, GameMeta, arena) + RenderJSON()
-├── testdata/                     # Symlink or copy of 2011_01_ATL_CHI.json for tests
+├── testdata/                     # 3 curated GB Packers wins; ships in repo, no external dep
 ├── go.mod
 ├── README.md
 └── WRITEUP.md
@@ -117,7 +117,7 @@ type GameState struct {
     AwayScore  uint8
     PlayType   PlayType
     WinProb    uint16   // wp * 10000 (e.g., 0.583 → 5830); 65535 = null
-    Posteam    [3]byte  // null-padded e.g. "CHI"
+    Posteam    [3]byte  // null-padded e.g. "GB\x00"
     Defteam    [3]byte
     DescOffset uint32   // byte offset into StateMatrix.Arena
     DescLen    uint16
@@ -184,14 +184,14 @@ type RawPlay struct {
 
 ### Ingestion (`internal/ingestion/parser.go`)
 
-**Actual JSON structure** (verified against data):
+**Actual JSON structure** (verified against testdata/2011_01_NO_GB.json):
 ```json
 {
-  "game_id": "2011_01_ATL_CHI",
-  "home_team": "CHI",
-  "away_team": "ATL",
-  "home_score": 30,
-  "away_score": 12,
+  "game_id": "2011_01_NO_GB",
+  "home_team": "GB",
+  "away_team": "NO",
+  "home_score": 42,
+  "away_score": 34,
   "plays": [ ... ]
 }
 ```
@@ -223,8 +223,15 @@ Standard library `flag` only — no Cobra (overkill for 3 flags, zero deps). Thr
 
 ## Data Source
 
-**Location:** `../paradox-platform/data/raw/*.json`
-270 JSON files, one per NFL game, 2011 season. Naming: `{season}_{week}_{away}_{home}.json` e.g. `2011_01_ATL_CHI.json`. ~85-95 KB each, ~120-150 plays per game.
+**Dev/demo:** `testdata/` ships 3 curated GB Packers wins directly in the repo — no external dependency required.
+
+| File | Game | Result |
+|------|------|--------|
+| `testdata/2011_01_NO_GB.json` | NO @ GB, Week 1 2011 | GB 42 – NO 34 |
+| `testdata/2011_09_GB_SD.json` | GB @ SD, Week 9 2011 | GB 45 – SD 38 |
+| `testdata/2011_14_OAK_GB.json` | OAK @ GB, Week 14 2011 | GB 46 – OAK 16 |
+
+**Full dataset:** `../paradox-platform/data/raw/*.json` — 270 JSON files, one per NFL game, 2011 season. Naming: `{season}_{week}_{away}_{home}.json`. ~85-95 KB each, ~120-150 plays per game. Not required for dev or demos.
 
 **`game_clock_total_seconds`** is the primary index field — pre-computed elapsed seconds since kickoff:
 - Regulation: 0 (kickoff) → 3600 (end of Q4)
@@ -258,26 +265,26 @@ Usage: clock-gate --tick <seconds> [--format text|json] <game-file>
        clock-gate --list <directory>
 
 Examples:
-  clock-gate --tick 1800 ../paradox-platform/data/raw/2011_01_ATL_CHI.json
-  clock-gate --tick 900 --format json ../paradox-platform/data/raw/2011_01_GB_NO.json
-  clock-gate --list ../paradox-platform/data/raw/
+  clock-gate --tick 1800 testdata/2011_01_NO_GB.json
+  clock-gate --tick 900 --format json testdata/2011_01_NO_GB.json
+  clock-gate --list testdata/
 ```
 
 ## Text Output Format
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  ATL @ CHI   │  Q2  12:30  │  Elapsed: 150s (2:30)      │
-├──────────────────────────────────────────────────────────┤
-│  Score:  CHI 7  –  ATL 3                                 │
-│  Ball:   CHI possession  │  3rd & 8  at CHI 45           │
-│  Win Prob: CHI 58.3%                                     │
-├──────────────────────────────────────────────────────────┤
-│  Last play: (12:34) 22-M.Forte left end to CHI 26...    │
-└──────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  NO @ GB   │  Q3  │  Elapsed: 1800s (30:00)               │
+├────────────────────────────────────────────────────────────┤
+│  Score:  GB 28  –  NO 17                                   │
+│  Ball:   NO possession │  1st & 10  at NO 80               │
+│  Win Prob: NO 15.3%                                        │
+├────────────────────────────────────────────────────────────┤
+│  (15:00) 28-M.Ingram up the middle to NO 21 for 1 yard… │
+└────────────────────────────────────────────────────────────┘
 ```
 
-Display win prob relative to posteam: "CHI Win %" when posteam == home team; "ATL Win %" when posteam == away. Elapsed display: `Xs (M:SS)`.
+Display win prob relative to posteam: "GB Win %" when posteam == home team; "NO Win %" when posteam == away. Elapsed display: `Xs (M:SS)`.
 
 ---
 
@@ -287,7 +294,7 @@ Display win prob relative to posteam: "CHI Win %" when posteam == home team; "AT
 Files: `internal/ingestion/schema.go`, `internal/ingestion/parser.go`
 - `ParseFile(path string) (GameHeader, []RawPlay, error)` — token-mode `json.Decoder`
 - Parse home/away from JSON header (`GameHeader.HomeTeam` / `GameHeader.AwayTeam`) — NOT from filename
-- Unit test: parse `2011_01_ATL_CHI.json`, assert correct play count, spot-check field values
+- Unit test: parse `testdata/2011_01_NO_GB.json`, assert correct play count, spot-check field values
 
 **Definition of done:** `go test ./internal/ingestion/...` passes
 
@@ -344,7 +351,7 @@ Phase gates (mandatory — no exceptions):
 
 ## Related Project
 
-`../paradox-platform` — the Python/TypeScript PoC this tool is derived from. Source data lives at `../paradox-platform/data/raw/`. Do not modify that project.
+`../paradox-platform` — the Python/TypeScript PoC this tool is derived from. Full dataset lives at `../paradox-platform/data/raw/` — not required for dev or demos (testdata/ ships in this repo). Do not modify that project.
 
 ## Plan File
 

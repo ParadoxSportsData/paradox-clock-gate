@@ -3,30 +3,73 @@
 Answer "what was the exact game state at elapsed second T?" for any NFL game in O(1) time, with a mathematical guarantee that no data from after tick T influences the result.
 
 ```
-$ clock-gate --tick 1800 data/raw/2011_01_ATL_CHI.json
+$ clock-gate --tick 1800 testdata/2011_01_NO_GB.json
 
 ┌────────────────────────────────────────────────────────────┐
-│  ATL @ CHI   │  Q3  │  Elapsed: 1800s (30:00)          │
+│  NO @ GB   │  Q3  │  Elapsed: 1800s (30:00)            │
 ├────────────────────────────────────────────────────────────┤
-│  Score:  CHI 16  –  ATL 3                                │
-│  Ball:   ATL possession                                    │
-│  Win Prob: ATL 11.2%                                       │
+│  Score:  GB 28  –  NO 17                                 │
+│  Ball:   NO possession │  1st & 10  at NO 80             │
+│  Win Prob: NO 15.3%                                        │
 ├────────────────────────────────────────────────────────────┤
-│  9-R.Gould kicks 66 yards from CHI 35 to ATL -1. 14-E.We…│
+│  (15:00) 28-M.Ingram up the middle to NO 21 for 1 yard (…│
 └────────────────────────────────────────────────────────────┘
 ```
 
+GB up 28–17 at the half, Rodgers and the defending Super Bowl champions would hold on 42–34.
+
 ---
 
+## Prerequisites
+
+- Go 1.21 or later (`go version` to check)
+
+That's it. Three curated sample games ship with the repo in `testdata/` — no external data source required for development or demos.
+
+> **Full dataset:** The broader ParadoxSportsData platform will handle data distribution for the full game library (current and historical seasons). `testdata/` is the development and demo path; production data loading is handled separately from this repo.
+
 ## Install
+
+**Step 1 — Clone**
 
 ```bash
 git clone https://github.com/ParadoxSportsData/paradox-clock-gate
 cd paradox-clock-gate
+```
+
+**Step 2 — Build**
+
+```bash
 go build ./cmd/clock-gate/
 ```
 
-No external dependencies. Requires Go 1.21+.
+No external dependencies. Binary produced at `./clock-gate`.
+
+**Step 3 — Verify**
+
+```bash
+# Rodgers vs. the Saints, Week 1 2011 — halftime state
+./clock-gate --tick 1800 testdata/2011_01_NO_GB.json
+```
+
+If you see a box-drawing table with score, quarter, and possession — setup is complete.
+
+**Run tests**
+
+```bash
+go test ./...
+go test -bench=BenchmarkQuery -benchmem ./internal/matrix/
+```
+
+---
+
+## Sample games (`testdata/`)
+
+| File | Game | Result |
+|------|------|--------|
+| `2011_01_NO_GB.json` | NO @ GB, Week 1 2011 | GB 42 – NO 34 |
+| `2011_09_GB_SD.json` | GB @ SD, Week 9 2011 | GB 45 – SD 38 |
+| `2011_14_OAK_GB.json` | OAK @ GB, Week 14 2011 | GB 46 – OAK 16 |
 
 ---
 
@@ -47,19 +90,25 @@ clock-gate --list <directory>
 
 ```bash
 # Kickoff
-clock-gate --tick 0 data/raw/2011_01_ATL_CHI.json
+clock-gate --tick 0 testdata/2011_01_NO_GB.json
 
 # Halftime (1800s = 30:00 elapsed)
-clock-gate --tick 1800 data/raw/2011_01_ATL_CHI.json
+clock-gate --tick 1800 testdata/2011_01_NO_GB.json
 
-# Late game, JSON output
-clock-gate --tick 3500 --format json data/raw/2011_01_ATL_CHI.json
+# Late game
+clock-gate --tick 3500 testdata/2011_01_NO_GB.json
+
+# JSON output, end of Q1
+clock-gate --tick 900 --format json testdata/2011_01_NO_GB.json
 
 # Query past game end — returns a bounded error
-clock-gate --tick 999999 data/raw/2011_01_ATL_CHI.json
+clock-gate --tick 999999 testdata/2011_01_NO_GB.json
 
 # List available games
-clock-gate --list data/raw/
+clock-gate --list testdata/
+
+# Different game — road shootout at San Diego
+clock-gate --tick 1800 testdata/2011_09_GB_SD.json
 ```
 
 ### JSON output
@@ -68,16 +117,16 @@ clock-gate --list data/raw/
 {
   "elapsed": 900,
   "quarter": 2,
-  "down": 3,
-  "yards_to_go": 8,
-  "yard_line": 58,
-  "home_score": 10,
-  "away_score": 3,
-  "posteam": "CHI",
-  "defteam": "ATL",
-  "win_prob": 0.7308,
+  "down": 1,
+  "yards_to_go": 10,
+  "yard_line": 62,
+  "home_score": 21,
+  "away_score": 7,
+  "posteam": "NO",
+  "defteam": "GB",
+  "win_prob": 0.1645,
   "has_state": true,
-  "play_description": "(15:00) 6-J.Cutler sacked at CHI 39 for -3 yards (55-J.Abraham)."
+  "play_description": "(15:00) 23-P.Thomas up the middle to NO 40 for 2 yards (90-B.Raji, 42-M.Burnett)."
 }
 ```
 
@@ -87,7 +136,7 @@ clock-gate --list data/raw/
 
 ### The core idea
 
-Each game file contains ~120–150 play events at irregular elapsed-second offsets. clock-gate compiles these into a pre-allocated flat array indexed directly by elapsed second — 9,001 slots covering regulation plus overtime. A query at tick T is `States[T]`: one array dereference, zero heap allocations, no branches.
+Each game file contains ~150–190 play events at irregular elapsed-second offsets. clock-gate compiles these into a pre-allocated flat array indexed directly by elapsed second — 9,001 slots covering regulation plus overtime. A query at tick T is `States[T]`: one array dereference, zero heap allocations, no branches.
 
 ### Temporal isolation guarantee
 
@@ -183,11 +232,11 @@ Each game file is a JSON wrapper object:
 
 ```json
 {
-  "game_id": "2011_01_ATL_CHI",
-  "home_team": "CHI",
-  "away_team": "ATL",
-  "home_score": 30,
-  "away_score": 12,
+  "game_id": "2011_01_NO_GB",
+  "home_team": "GB",
+  "away_team": "NO",
+  "home_score": 42,
+  "away_score": 34,
   "plays": [ ... ]
 }
 ```

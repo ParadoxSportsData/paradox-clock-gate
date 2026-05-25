@@ -4,26 +4,26 @@ import "testing"
 
 func TestGameHeaderFields(t *testing.T) {
 	h := GameHeader{
-		GameID:    "2011_01_ATL_CHI",
-		HomeTeam:  "CHI",
-		AwayTeam:  "ATL",
-		HomeScore: 30,
-		AwayScore: 12,
+		GameID:    "2011_01_NO_GB",
+		HomeTeam:  "GB",
+		AwayTeam:  "NO",
+		HomeScore: 42,
+		AwayScore: 34,
 	}
-	if h.GameID != "2011_01_ATL_CHI" {
-		t.Fatalf("GameID = %q, want 2011_01_ATL_CHI", h.GameID)
+	if h.GameID != "2011_01_NO_GB" {
+		t.Fatalf("GameID = %q, want 2011_01_NO_GB", h.GameID)
 	}
-	if h.HomeTeam != "CHI" {
-		t.Fatalf("HomeTeam = %q, want CHI", h.HomeTeam)
+	if h.HomeTeam != "GB" {
+		t.Fatalf("HomeTeam = %q, want GB", h.HomeTeam)
 	}
-	if h.AwayTeam != "ATL" {
-		t.Fatalf("AwayTeam = %q, want ATL", h.AwayTeam)
+	if h.AwayTeam != "NO" {
+		t.Fatalf("AwayTeam = %q, want NO", h.AwayTeam)
 	}
-	if h.HomeScore != 30 {
-		t.Fatalf("HomeScore = %d, want 30", h.HomeScore)
+	if h.HomeScore != 42 {
+		t.Fatalf("HomeScore = %d, want 42", h.HomeScore)
 	}
-	if h.AwayScore != 12 {
-		t.Fatalf("AwayScore = %d, want 12", h.AwayScore)
+	if h.AwayScore != 34 {
+		t.Fatalf("AwayScore = %d, want 34", h.AwayScore)
 	}
 }
 

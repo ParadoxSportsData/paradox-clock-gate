@@ -182,6 +182,22 @@ If the line does not start with `PDX-`: the commit was blocked by a hook. Read t
 
 ---
 
+### Step 11 — Invoke `qa-notes` (Killer)
+
+Write: "Invoking qa-notes for PDX-[N] using git show HEAD as the diff source."
+
+Invoke the `qa-notes` skill. Pass:
+- Diff source: `git show HEAD`
+- Ticket ID: PDX-[N] from Step 1
+
+The qa-notes skill posts an ADF comment to the Jira ticket. This is the QA documentation record for the commit.
+
+Do not skip this step even if the diff is small. A simple struct ticket produces a minimal qa-notes output — that is correct behavior, not a reason to skip.
+
+**Output:** `qa-notes` invocation complete; ADF comment posted to PDX-[N].
+
+---
+
 ## Proof Requirements
 
 - **Step 1:** Intent statement written before any git command.
@@ -191,6 +207,7 @@ If the line does not start with `PDX-`: the commit was blocked by a hook. Read t
 - **Step 7:** 6/6 score written before Step 8.
 - **Step 8:** `"Body names decision: [decision]"` written before Step 9.
 - **Step 10:** `git log --oneline -1` written; starts with SHA + `PDX-N`.
+- **Step 11:** `qa-notes` invocation visible; ADF comment posted to Jira ticket.
 
 ## State Persistence
 
@@ -206,11 +223,13 @@ N/A — single session. Output is one git commit per invocation.
 | "I'll skip go test — I just ran it" | Step 5a runs immediately before committing. State changes between phases are real. |
 | "The commit message looks right — I'll skip the field count" | "Looks right" is not 6/6. A missing Co-Author line looks fine at a glance and fails the hook. |
 | "The commit ran — I can move on" | Step 10 is not optional. A hook-blocked commit exits non-zero silently. Read the log. |
+| "The diff is tiny — qa-notes is overkill" | Step 11 is not optional. A simple diff produces a minimal qa-notes output — that is the correct and proportional result, not a reason to skip. |
 
 ## Integration
 
 ```
 Called by: TDD workflow at each phase boundary; standalone
-Calls: none
-Output: One git commit per invocation visible in git log with PDX-N-prefixed conventional commit message
+Calls: qa-notes (Step 11)
+Output: One git commit per invocation visible in git log with PDX-N-prefixed conventional commit message;
+        QA notes ADF comment posted to the Jira ticket
 ```

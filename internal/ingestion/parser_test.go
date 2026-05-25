@@ -5,29 +5,29 @@ import (
 )
 
 func TestParseFileReturnsHeader(t *testing.T) {
-	header, _, err := ParseFile("../../testdata/2011_01_ATL_CHI.json")
+	header, _, err := ParseFile("../../testdata/2011_01_NO_GB.json")
 	if err != nil {
 		t.Fatalf("ParseFile error: %v", err)
 	}
-	if header.GameID != "2011_01_ATL_CHI" {
-		t.Errorf("GameID = %q, want 2011_01_ATL_CHI", header.GameID)
+	if header.GameID != "2011_01_NO_GB" {
+		t.Errorf("GameID = %q, want 2011_01_NO_GB", header.GameID)
 	}
-	if header.HomeTeam != "CHI" {
-		t.Errorf("HomeTeam = %q, want CHI", header.HomeTeam)
+	if header.HomeTeam != "GB" {
+		t.Errorf("HomeTeam = %q, want GB", header.HomeTeam)
 	}
-	if header.AwayTeam != "ATL" {
-		t.Errorf("AwayTeam = %q, want ATL", header.AwayTeam)
+	if header.AwayTeam != "NO" {
+		t.Errorf("AwayTeam = %q, want NO", header.AwayTeam)
 	}
-	if header.HomeScore != 30 {
-		t.Errorf("HomeScore = %d, want 30", header.HomeScore)
+	if header.HomeScore != 42 {
+		t.Errorf("HomeScore = %d, want 42", header.HomeScore)
 	}
-	if header.AwayScore != 12 {
-		t.Errorf("AwayScore = %d, want 12", header.AwayScore)
+	if header.AwayScore != 34 {
+		t.Errorf("AwayScore = %d, want 34", header.AwayScore)
 	}
 }
 
 func TestParseFilePlaysNonEmpty(t *testing.T) {
-	_, plays, err := ParseFile("../../testdata/2011_01_ATL_CHI.json")
+	_, plays, err := ParseFile("../../testdata/2011_01_NO_GB.json")
 	if err != nil {
 		t.Fatalf("ParseFile error: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestParseFilePlaysNonEmpty(t *testing.T) {
 }
 
 func TestParseFilePlayFields(t *testing.T) {
-	_, plays, err := ParseFile("../../testdata/2011_01_ATL_CHI.json")
+	_, plays, err := ParseFile("../../testdata/2011_01_NO_GB.json")
 	if err != nil {
 		t.Fatalf("ParseFile error: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestParseFilePlayFields(t *testing.T) {
 func TestParseFileNullableFieldsArePointers(t *testing.T) {
 	// Nullable fields must remain nil for plays where the JSON value is null.
 	// We verify the first play in the file — kickoff plays typically have null down/ydstogo.
-	_, plays, err := ParseFile("../../testdata/2011_01_ATL_CHI.json")
+	_, plays, err := ParseFile("../../testdata/2011_01_NO_GB.json")
 	if err != nil {
 		t.Fatalf("ParseFile error: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestParseFileNullableFieldsArePointers(t *testing.T) {
 }
 
 func TestParseFileGameClockTotalSecondsRange(t *testing.T) {
-	_, plays, err := ParseFile("../../testdata/2011_01_ATL_CHI.json")
+	_, plays, err := ParseFile("../../testdata/2011_01_NO_GB.json")
 	if err != nil {
 		t.Fatalf("ParseFile error: %v", err)
 	}

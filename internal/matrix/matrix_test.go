@@ -53,9 +53,9 @@ func TestGameStateFields(t *testing.T) {
 		HomeScore:  7,
 		AwayScore:  3,
 		PlayType:   PlayTypePass,
-		WinProb:    5830,
-		Posteam:    [3]byte{'C', 'H', 'I'},
-		Defteam:    [3]byte{'A', 'T', 'L'},
+		WinProb:    7240,
+		Posteam:    [3]byte{'G', 'B', 0},
+		Defteam:    [3]byte{'N', 'O', 0},
 		DescOffset: 0,
 		DescLen:    42,
 		HasState:   true,
@@ -63,11 +63,11 @@ func TestGameStateFields(t *testing.T) {
 	if gs.Elapsed != 900 {
 		t.Fatalf("Elapsed = %d, want 900", gs.Elapsed)
 	}
-	if gs.WinProb != 5830 {
-		t.Fatalf("WinProb = %d, want 5830", gs.WinProb)
+	if gs.WinProb != 7240 {
+		t.Fatalf("WinProb = %d, want 7240", gs.WinProb)
 	}
-	if gs.Posteam != [3]byte{'C', 'H', 'I'} {
-		t.Fatalf("Posteam = %v, want CHI", gs.Posteam)
+	if gs.Posteam != [3]byte{'G', 'B', 0} {
+		t.Fatalf("Posteam = %v, want GB", gs.Posteam)
 	}
 	if !gs.HasState {
 		t.Fatal("HasState must be true when set")
@@ -84,13 +84,13 @@ func TestStateMatrixSize(t *testing.T) {
 
 func TestGameMetaFields(t *testing.T) {
 	meta := GameMeta{
-		GameID:   "2011_01_ATL_CHI",
-		HomeTeam: "CHI",
-		AwayTeam: "ATL",
+		GameID:   "2011_01_NO_GB",
+		HomeTeam: "GB",
+		AwayTeam: "NO",
 		MaxTick:  1800,
 	}
-	if meta.GameID != "2011_01_ATL_CHI" {
-		t.Fatalf("GameID = %q, want 2011_01_ATL_CHI", meta.GameID)
+	if meta.GameID != "2011_01_NO_GB" {
+		t.Fatalf("GameID = %q, want 2011_01_NO_GB", meta.GameID)
 	}
 	if meta.MaxTick != 1800 {
 		t.Fatalf("MaxTick = %d, want 1800", meta.MaxTick)

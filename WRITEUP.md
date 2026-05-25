@@ -6,9 +6,15 @@
 
 ## Problem & Motivation
 
-The `paradox-platform` Python PoC proved the concept: index NFL play-by-play data by a linear timestamp and answer "what was the game state at moment T?" in sub-second time. But it had real technical debt — linear scans, N+1 queries, hardcoded localhost URLs, and no temporal isolation guarantee (a bug could let future-play data bleed into historical queries). The core innovation (linear timestamp for video sync) deserved a clean implementation.
+The use case: a user is watching a recorded NFL game on a streaming service — Super Bowl XLV from 2011, say, on YouTube. They want a second screen that knows exactly where they are in the broadcast and shows live-style game state for that moment: score, down-and-distance, win probability, last play. Not the final box score. Not season totals. The exact state at the elapsed second they're watching. Spoiler-free.
 
-`clock-gate` extracts and perfects that one mechanism: given a game file and an elapsed-second offset, return the exact game state that was true at that tick — nothing from after it, nothing missing from before it. The forward-fill compiler makes this a mathematical guarantee, not just a convention.
+That experience depends on one primitive: given elapsed second T, return the exact game state that was true at T — nothing from after it, nothing missing from before it.
+
+The `paradox-platform` Python PoC proved the concept: index NFL play-by-play data by `game_clock_total_seconds` and answer "what was the game state at moment T?" But it had real technical debt — linear scans, N+1 queries, hardcoded localhost URLs, and no temporal isolation guarantee (a bug could let future-play data bleed into historical queries). The core innovation deserved a clean implementation.
+
+`clock-gate` extracts and perfects that one mechanism: the forward-fill compiler makes the temporal isolation guarantee mathematical rather than conventional. There is no code path by which a play at tick T+1 can affect the result returned for tick T.
+
+`ParadoxSportsData` — the GitHub org this lives under — is a deliberate platform foundation, not a one-product account. Clock-gate is the first artifact: the temporal query engine that every future product in the org depends on. The rewind league, the momentum engine, the injury-aware simulation — all of those require accurate point-in-time game state as a primitive. You build that once, correctly, and everything else composes on top of it.
 
 ---
 
@@ -74,9 +80,24 @@ During TDD Red phase, the agent wrote a forward-fill test with only one play at 
 
 ## What I'd Add With More Time
 
-- **`--range T1 T2`:** Show what changed between two ticks — possession changes, score changes, drive progression. This is the bridge from "point query" to "interval query" and the most natural next primitive.
-- **`--filter scoring`:** Jump to only scoring plays. Useful for highlight generation.
-- **`--clock "Q2 15:00"` input format:** Parse quarter + clock string instead of requiring raw elapsed seconds.
-- **Plugin repo — AI workflow system (post-MVP):** The skills, hooks, memory structure, and settings patterns built during clock-gate setup packaged as a Claude Code marketplace plugin. Any project installs it once and gets the full collaboration infrastructure: memory system, skill-builder, Stop hook, toolApprovals allowlist, scope isolation guard. Clock-gate is the proof-of-concept; the plugin repo makes the system reusable without reinventing what the marketplace already provides.
-- **`clock-gate serve` — HTTP mode (Phase 2A):** Expose the compiled StateMatrix over HTTP via `net/http` stdlib (same zero-dep rationale). One StateMatrix per game loaded into memory, shared across all concurrent users — the O(1) query path with no GC pressure becomes a horizontally scalable read layer. The direct bridge to the full `paradox-platform` rewrite.
-- **React + TypeScript UI (Phase 2B):** Timeline scrubber, score display, field position, win probability chart over the serve mode. Different constraints from the backend — React's component model and TypeScript's compile-time API safety are the right tools for a UI, even if zero-dep thinking doesn't apply here.
+**Near-term CLI polish:**
+- **`--clock "Q2 15:00"` input format:** Parse quarter + clock string instead of requiring raw elapsed seconds. The current UX asks users to do arithmetic that the tool should do for them.
+- **`--range T1 T2`:** Return what changed between two ticks — possession, score, drive progression. The natural bridge from point query to interval query, and the foundation for drive summaries.
+- **`--filter scoring`:** Seek to scoring plays only. Useful for highlight generation and the "catch me up" use case.
+
+**Production infrastructure:**
+- **`clock-gate serve` — HTTP mode (Phase 2A):** Expose the compiled StateMatrix over `net/http` stdlib (same zero-dep rationale as `flag` over Cobra). One StateMatrix per game in server memory, shared across all concurrent users — O(1) query path with no GC pressure becomes a horizontally scalable read layer.
+- **React + TypeScript + Vite UI (Phase 2B):** Timeline scrubber, score display, field position, win probability chart over the serve mode. Different constraints from the backend: React's component model and TypeScript's compile-time API safety are the right tools for a UI; zero-dep thinking doesn't apply to a layer where maintainability and extensibility matter more than allocation counts.
+- **Plugin repo — AI workflow system:** The skills, hooks, memory structure, and settings patterns built during clock-gate setup packaged as a Claude Code marketplace plugin. Any project installs it once and gets the full collaboration infrastructure: memory system, skill-builder, Stop hook, toolApprovals allowlist, scope isolation guard. The plugin repo makes the system reusable without reinventing what the marketplace already provides.
+
+**The harder engineering problem — live in-progress games:**
+The replay case (completed game) is actually the easier temporal isolation problem: the future doesn't exist yet in the data. The more interesting case is a game that has started but not yet ended — the user starts watching from the beginning while the game is still being played. Now the future *does* exist in the data (the ongoing game), and the gate must actively hide it. The StateMatrix is no longer statically compiled at load time; it's growing as plays arrive. `MaxTick` is no longer known at startup — it's the user's current video position, not the game's live edge. This requires streaming compilation (append plays as they arrive without recompiling the full matrix), a dynamic gate (compare tick against video position, not game completion), and a spoiler firewall (the serve endpoint must know where each user's video is, not just where the game is). That's a fundamentally different concurrency model from the static compiled case.
+
+**The longer arc — rewind league, momentum, injury:**
+The temporal engine is the foundation for a simulation product that's the real vision: a "Rewind Sports League" where historical performance data through year X drives a randomized but realistic league simulation. To build that, three additional primitives need to exist on top of what clock-gate provides:
+
+- *Momentum quantification:* The `WinProb` trajectory across a drive sequence is already a momentum signal embedded in the data — WP moving 0.45 → 0.38 → 0.31 across three plays is measurable pressure. Quantifying momentum requires extracting series-level patterns from the play sequence, not just point-in-time state. The forward-fill structure clock-gate produces is the right shape for this: every elapsed second is populated, so rolling windows over the sequence are trivial.
+
+- *Injury-aware simulation:* NFL performance follows ebbs and flows — a player who was at peak performance for six weeks and then took a significant hit performs differently in the weeks that follow. A realistic simulation has to model not just historical averages but the state a player was in at a given point in their career. `nflfastR` carries injury report data that clock-gate's ingestion layer doesn't currently surface. Extending the ingestion to capture player-level health signals is the first step.
+
+- *Coaching persona simulation:* The domain expert personas in the `paradox-platform` knowledge base — offensive coordinator, defensive coordinator, QB coach — encode football decision logic. In a rewind league, these become AI agent roles: an OC agent with "script the first 15 plays, exploit the matchup" as its prime directive making play-calling decisions constrained by its team's personnel health and momentum state. The temporal engine provides the historical truth; the persona agents provide the decision layer that generates realistic simulation from it.

@@ -8,27 +8,27 @@ import (
 )
 
 func makeTestState() (matrix.GameState, matrix.GameMeta, []byte) {
-	arena := []byte("(12:34) M.Forte left end to CHI 26 for 5 yards")
+	arena := []byte("(12:34) 12-A.Rodgers pass right to 87-J.Nelson for 12 yards")
 	gs := matrix.GameState{
 		Elapsed:    150,
 		Quarter:    2,
 		Down:       3,
 		YardsToGo:  8,
 		YardLine:   45,
-		HomeScore:  7,
-		AwayScore:  3,
-		PlayType:   matrix.PlayTypeRun,
-		WinProb:    5830,
-		Posteam:    [3]byte{'C', 'H', 'I'},
-		Defteam:    [3]byte{'A', 'T', 'L'},
+		HomeScore:  14,
+		AwayScore:  7,
+		PlayType:   matrix.PlayTypePass,
+		WinProb:    7240,
+		Posteam:    [3]byte{'G', 'B', 0},
+		Defteam:    [3]byte{'N', 'O', 0},
 		DescOffset: 0,
 		DescLen:    uint16(len(arena)),
 		HasState:   true,
 	}
 	meta := matrix.GameMeta{
-		GameID:   "2011_01_ATL_CHI",
-		HomeTeam: "CHI",
-		AwayTeam: "ATL",
+		GameID:   "2011_01_NO_GB",
+		HomeTeam: "GB",
+		AwayTeam: "NO",
 		MaxTick:  3600,
 	}
 	return gs, meta, arena
@@ -37,11 +37,11 @@ func makeTestState() (matrix.GameState, matrix.GameMeta, []byte) {
 func TestRenderTextContainsTeams(t *testing.T) {
 	gs, meta, arena := makeTestState()
 	out := RenderText(gs, meta, arena)
-	if !strings.Contains(out, "CHI") {
-		t.Error("RenderText output must contain home team CHI")
+	if !strings.Contains(out, "GB") {
+		t.Error("RenderText output must contain home team GB")
 	}
-	if !strings.Contains(out, "ATL") {
-		t.Error("RenderText output must contain away team ATL")
+	if !strings.Contains(out, "NO") {
+		t.Error("RenderText output must contain away team NO")
 	}
 }
 
@@ -75,23 +75,23 @@ func TestRenderTextContainsElapsed(t *testing.T) {
 func TestRenderTextContainsWinProb(t *testing.T) {
 	gs, meta, arena := makeTestState()
 	out := RenderText(gs, meta, arena)
-	// WinProb=5830 → 58.3%
-	if !strings.Contains(out, "58.3") {
-		t.Error("RenderText output must contain win probability 58.3")
+	// WinProb=7240 → 72.4%
+	if !strings.Contains(out, "72.4") {
+		t.Error("RenderText output must contain win probability 72.4")
 	}
 }
 
 func TestRenderTextContainsDescription(t *testing.T) {
 	gs, meta, arena := makeTestState()
 	out := RenderText(gs, meta, arena)
-	if !strings.Contains(out, "M.Forte") {
+	if !strings.Contains(out, "A.Rodgers") {
 		t.Error("RenderText output must contain play description")
 	}
 }
 
 func TestRenderTextNoStateMessage(t *testing.T) {
 	gs := matrix.GameState{HasState: false}
-	meta := matrix.GameMeta{HomeTeam: "CHI", AwayTeam: "ATL"}
+	meta := matrix.GameMeta{HomeTeam: "GB", AwayTeam: "NO"}
 	out := RenderText(gs, meta, nil)
 	if !strings.Contains(out, "no state") && !strings.Contains(out, "No state") && !strings.Contains(out, "no data") && !strings.Contains(out, "No data") {
 		t.Error("RenderText with HasState=false must indicate no state available")

@@ -10,15 +10,15 @@ func TestCompileForwardFill(t *testing.T) {
 	// Play at tick 10, next play at tick 20 — ticks 11-19 must be forward-filled from tick 10.
 	header := ingestion.GameHeader{
 		GameID:   "test",
-		HomeTeam: "CHI",
-		AwayTeam: "ATL",
+		HomeTeam: "GB",
+		AwayTeam: "NO",
 	}
 	down := 1
 	ytg := 10
 	yl := 50
 	pt := "run"
-	posteam := "CHI"
-	defteam := "ATL"
+	posteam := "GB"
+	defteam := "NO"
 	plays := []ingestion.RawPlay{
 		{
 			PlayID:                1,
@@ -65,13 +65,13 @@ func TestCompileForwardFill(t *testing.T) {
 
 func TestCompileTickZeroBeforeFirstPlay(t *testing.T) {
 	// Before any play fires, States[0] must have HasState=false.
-	header := ingestion.GameHeader{GameID: "test", HomeTeam: "CHI", AwayTeam: "ATL"}
+	header := ingestion.GameHeader{GameID: "test", HomeTeam: "GB", AwayTeam: "NO"}
 	down := 1
 	ytg := 10
 	yl := 50
 	pt := "kickoff"
-	posteam := "CHI"
-	defteam := "ATL"
+	posteam := "GB"
+	defteam := "NO"
 	plays := []ingestion.RawPlay{
 		{
 			PlayID:                1,
@@ -98,11 +98,11 @@ func TestCompileTickZeroBeforeFirstPlay(t *testing.T) {
 
 func TestCompileConcurrentPlaysHigherPlayIDWins(t *testing.T) {
 	// Two plays at the same tick — higher PlayID must win.
-	header := ingestion.GameHeader{GameID: "test", HomeTeam: "CHI", AwayTeam: "ATL"}
+	header := ingestion.GameHeader{GameID: "test", HomeTeam: "GB", AwayTeam: "NO"}
 	pt1 := "run"
 	pt2 := "pass"
-	posteam := "CHI"
-	defteam := "ATL"
+	posteam := "GB"
+	defteam := "NO"
 	plays := []ingestion.RawPlay{
 		{
 			PlayID:                1,
@@ -131,10 +131,10 @@ func TestCompileConcurrentPlaysHigherPlayIDWins(t *testing.T) {
 
 func TestCompileOTPlays(t *testing.T) {
 	// OT plays past second 3600 must compile correctly.
-	header := ingestion.GameHeader{GameID: "test", HomeTeam: "CHI", AwayTeam: "ATL"}
+	header := ingestion.GameHeader{GameID: "test", HomeTeam: "GB", AwayTeam: "NO"}
 	pt := "run"
-	posteam := "CHI"
-	defteam := "ATL"
+	posteam := "GB"
+	defteam := "NO"
 	plays := []ingestion.RawPlay{
 		{
 			PlayID:                1,
@@ -157,10 +157,10 @@ func TestCompileOTPlays(t *testing.T) {
 
 func TestCompileScoreAttribution(t *testing.T) {
 	// When posteam == HomeTeam: HomeScore = PosteamScore, AwayScore = DefteamScore.
-	header := ingestion.GameHeader{GameID: "test", HomeTeam: "CHI", AwayTeam: "ATL"}
+	header := ingestion.GameHeader{GameID: "test", HomeTeam: "GB", AwayTeam: "NO"}
 	pt := "pass"
-	posteam := "CHI" // posteam == HomeTeam
-	defteam := "ATL"
+	posteam := "GB" // posteam == HomeTeam
+	defteam := "NO"
 	homeScore := 7
 	awayScore := 3
 	plays := []ingestion.RawPlay{
@@ -187,10 +187,10 @@ func TestCompileScoreAttribution(t *testing.T) {
 
 func TestCompileScoreAttributionAwaySide(t *testing.T) {
 	// When posteam == AwayTeam: AwayScore = PosteamScore, HomeScore = DefteamScore.
-	header := ingestion.GameHeader{GameID: "test", HomeTeam: "CHI", AwayTeam: "ATL"}
+	header := ingestion.GameHeader{GameID: "test", HomeTeam: "GB", AwayTeam: "NO"}
 	pt := "run"
-	posteam := "ATL" // posteam == AwayTeam
-	defteam := "CHI"
+	posteam := "NO" // posteam == AwayTeam
+	defteam := "GB"
 	awayScore := 10
 	homeScore := 7
 	plays := []ingestion.RawPlay{
@@ -199,7 +199,7 @@ func TestCompileScoreAttributionAwaySide(t *testing.T) {
 			Quarter:               3,
 			GameClockTotalSeconds: 2000,
 			PlayType:              &pt,
-			Description:           "ATL run",
+			Description:           "NO run",
 			Posteam:               &posteam,
 			Defteam:               &defteam,
 			PosteamScore:          &awayScore,
@@ -216,10 +216,10 @@ func TestCompileScoreAttributionAwaySide(t *testing.T) {
 }
 
 func TestCompileMaxTick(t *testing.T) {
-	header := ingestion.GameHeader{GameID: "test", HomeTeam: "CHI", AwayTeam: "ATL"}
+	header := ingestion.GameHeader{GameID: "test", HomeTeam: "GB", AwayTeam: "NO"}
 	pt := "run"
-	posteam := "CHI"
-	defteam := "ATL"
+	posteam := "GB"
+	defteam := "NO"
 	plays := []ingestion.RawPlay{
 		{PlayID: 1, Quarter: 1, GameClockTotalSeconds: 100, PlayType: &pt, Description: "a", Posteam: &posteam, Defteam: &defteam},
 		{PlayID: 2, Quarter: 4, GameClockTotalSeconds: 3500, PlayType: &pt, Description: "b", Posteam: &posteam, Defteam: &defteam},
@@ -231,10 +231,10 @@ func TestCompileMaxTick(t *testing.T) {
 }
 
 func BenchmarkQuery(b *testing.B) {
-	header := ingestion.GameHeader{GameID: "bench", HomeTeam: "CHI", AwayTeam: "ATL"}
+	header := ingestion.GameHeader{GameID: "bench", HomeTeam: "GB", AwayTeam: "NO"}
 	pt := "run"
-	posteam := "CHI"
-	defteam := "ATL"
+	posteam := "GB"
+	defteam := "NO"
 	plays := make([]ingestion.RawPlay, 150)
 	for i := range plays {
 		tick := i * 24
