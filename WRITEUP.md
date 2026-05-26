@@ -62,9 +62,15 @@ First struct design had `string` fields for `Posteam` and `Description` directly
 Gemini's prompt suggested binary search over sorted play timestamps. Overruled in favor of forward-fill + O(1) array lookup. Trade-off: 252 KB of pre-allocated memory (`[9001]GameState`) versus true O(1) with zero runtime conditionals. At game-file scale (~90 KB input), 252 KB is trivially cheap. The O(1) claim is cleaner and provably correct.
 
 **4. `float64` for `WinProb`**
-AI defaulted to `float64` in the struct. Replaced with `uint16` storing `wp × 10000` (e.g., 0.583 → 5830). Gives 0.01% precision — more than sufficient — while keeping the struct free of floating-point and GC-visible memory. Reconvert to float only at display time.
+AI defaulted to `float64` in the struct. Rejected: replaced with `uint16` storing `wp × 10000` (e.g., 0.583 → 5830). Gives 0.01% precision — more than sufficient — while keeping the struct free of floating-point and GC-visible memory. Reconvert to float only at display time.
 
-**5. Forward-fill test wrote a structurally incorrect test**
+**5. Home/away teams from filename**
+AI initially described parsing home and away team abbreviations from the filename (e.g., `2011_01_NO_GB.json` → away=NO, home=GB). Overruled after inspecting the actual data: `home_team` and `away_team` are explicit top-level JSON fields. Parsing from the filename introduces fragile assumptions about naming conventions; parsing from JSON is authoritative and eliminates them entirely.
+
+**6. Flat array parser assumption**
+AI described the parser as opening `[`, looping `decoder.Decode(&play)`, closing `]` — assuming the file was a flat JSON array of plays. Overruled after reading an actual game file: the format is a wrapper object with `game_id`, `home_team`, `away_team`, `home_score`, `away_score`, and a nested `"plays"` array. The token-mode parser must handle the outer object structure first, key by key, before entering the plays array.
+
+**7. Forward-fill test wrote a structurally incorrect test**
 During TDD Red phase, the agent wrote a forward-fill test with only one play at tick 10 and asserted that `States[11]` would be forward-filled. But with a single play, `maxTick = 10` and the fill loop stops at 10 — it never reaches tick 11. The test would have passed incorrectly if `States[11]` happened to have HasState=false (which it did, by zero-value). The error was caught immediately by the mandatory RED-verify step: run the test, confirm it fails for the right reason. It failed for the wrong reason — the test was bad, not the code. Fixed by adding a second play at tick 20 to create a real gap to fill. This is exactly why TDD's "watch it fail correctly" step is not optional.
 
 ---
@@ -75,6 +81,24 @@ During TDD Red phase, the agent wrote a forward-fill test with only one play at 
 - **OT game detection relies on play data having `quarter >= 5`** — there's no explicit header in the JSON indicating OT. Works correctly but is implicit.
 - **`--list` is minimal** — just filenames and no play counts or final scores.
 - **No `--range` flag** to diff state between two ticks (the obvious next feature for drive summaries).
+
+---
+
+## Benchmark
+
+The central technical claim: zero allocations on the query path. Verified with `go test -bench=BenchmarkQuery -benchmem ./internal/matrix/` on Apple M4 Pro:
+
+```
+goos: darwin
+goarch: arm64
+pkg: github.com/ParadoxSportsData/paradox-clock-gate/internal/matrix
+cpu: Apple M4 Pro
+BenchmarkQuery-14    	1000000000	         0.2337 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/ParadoxSportsData/paradox-clock-gate/internal/matrix	0.689s
+```
+
+0 allocs/op confirms the design: `GameState` contains no pointer fields (`[3]byte` for team abbreviations, `uint16`/`uint8` for all numeric fields). The GC has nothing to collect at query time. 0.23 ns/op is one array dereference — the expected cost of a cache-warm L1 access.
 
 ---
 
