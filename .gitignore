@@ -6,3 +6,8 @@
 
 # Test artifacts
 /tmp/clock-gate-test-output.txt
+
+# Frontend — node_modules must not be committed; src/ must not be excluded
+ui/node_modules/
+ui/dist/
+ui/.env.development.local

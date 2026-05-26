@@ -14,6 +14,12 @@ import (
 )
 
 func main() {
+	// Serve subcommand: clock-gate serve [--port N] [--data DIR]
+	if len(os.Args) > 1 && os.Args[1] == "serve" {
+		runServe(os.Args[2:])
+		return
+	}
+
 	tick := flag.Int("tick", -1, "elapsed seconds since kickoff to query")
 	format := flag.String("format", "text", "output format: text or json")
 	list := flag.Bool("list", false, "list game files in the given directory")
