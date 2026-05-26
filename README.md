@@ -111,6 +111,38 @@ clock-gate --list testdata/
 clock-gate --tick 1800 testdata/2011_09_GB_SD.json
 ```
 
+### Serve mode (HTTP API)
+
+```bash
+./clock-gate serve [--port <port>] [--data <dir>]
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--port` | `8080` | Port to listen on |
+| `--data` | `./testdata` | Directory of game JSON files |
+
+```bash
+# Start with bundled testdata
+./clock-gate serve
+
+# Start with full 2011 dataset
+./clock-gate serve --data ../paradox-platform/data/raw/
+```
+
+Endpoints served:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/games` | List all games in the data directory |
+| `GET` | `/games/{id}/timeline` | Play index (used by timeline scrubber) |
+| `GET` | `/games/{id}/state?tick=T` | Game state at elapsed second T |
+
+The `state` response shape is identical to CLI `--format json` output. All requests compile the game's StateMatrix on first access and serve subsequent queries in O(1) from the in-memory cache.
+
+---
+
 ### JSON output
 
 ```json
