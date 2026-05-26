@@ -198,6 +198,26 @@ Do not skip this step even if the diff is small. A simple struct ticket produces
 
 ---
 
+### Step 12 — Transition Ticket to In Testing + Handoff (Killer)
+
+*Execute only for GREEN phase commits. Skip for RED phase commits.*
+
+Call `mcp__paradox-confluence__jira_transition_issue` with:
+- Issue key: PDX-[N]
+- Transition name: `"In Testing"`
+
+If the transition returns an error: read the error, determine the correct transition name or ID, retry.
+
+Write in conversation:
+```
+PDX-[N] In Progress → In Testing.
+Handing off to auto-qa: invoke auto-qa PDX-[N]
+```
+
+**Output:** Ticket transitioned to In Testing; handoff message written in conversation.
+
+---
+
 ## Proof Requirements
 
 - **Step 1:** Intent statement written before any git command.
@@ -208,6 +228,7 @@ Do not skip this step even if the diff is small. A simple struct ticket produces
 - **Step 8:** `"Body names decision: [decision]"` written before Step 9.
 - **Step 10:** `git log --oneline -1` written; starts with SHA + `PDX-N`.
 - **Step 11:** `qa-notes` invocation visible; ADF comment posted to Jira ticket.
+- **Step 12:** Ticket transitioned to In Testing (GREEN only); handoff message `"Handing off to auto-qa: invoke auto-qa PDX-[N]"` written in conversation.
 
 ## State Persistence
 
@@ -229,7 +250,8 @@ N/A — single session. Output is one git commit per invocation.
 
 ```
 Called by: TDD workflow at each phase boundary; standalone
-Calls: qa-notes (Step 11)
+Calls: qa-notes (Step 11), mcp__paradox-confluence__jira_transition_issue (Step 12, GREEN only)
 Output: One git commit per invocation visible in git log with PDX-N-prefixed conventional commit message;
-        QA notes ADF comment posted to the Jira ticket
+        QA notes ADF comment posted to the Jira ticket;
+        ticket → In Testing (GREEN) with handoff message to invoke auto-qa
 ```
