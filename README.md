@@ -22,7 +22,7 @@ GB up 28–17 at the half, Rodgers and the defending Super Bowl champions would 
 
 ## Prerequisites
 
-- Go 1.21 or later (`go version` to check)
+- Go 1.26.3 or later (`go version` to check)
 
 That's it. Three curated sample games ship with the repo in `testdata/` — no external data source required for development or demos.
 
@@ -217,7 +217,7 @@ One pre-compiled StateMatrix per game, shared across all concurrent users watchi
 ## Performance
 
 ```
-BenchmarkQuery-14    1000000000    0.24 ns/op    0 B/op    0 allocs/op
+BenchmarkQuery-14    1000000000    0.2347 ns/op    0 B/op    0 allocs/op
 ```
 
 Zero allocations on the query path. `GameState` contains no pointer fields (`[3]byte` for team abbreviations, `uint16`/`uint8` for all numeric fields) — the GC has nothing to collect at query time.
