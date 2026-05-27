@@ -57,6 +57,18 @@ func ParseFile(path string) (GameHeader, []RawPlay, error) {
 			if err := dec.Decode(&header.AwayScore); err != nil {
 				return GameHeader{}, nil, fmt.Errorf("parse %s away_score: %w", path, err)
 			}
+		case "game_date":
+			if err := dec.Decode(&header.GameDate); err != nil {
+				return GameHeader{}, nil, fmt.Errorf("parse %s game_date: %w", path, err)
+			}
+		case "week":
+			if err := dec.Decode(&header.Week); err != nil {
+				return GameHeader{}, nil, fmt.Errorf("parse %s week: %w", path, err)
+			}
+		case "season":
+			if err := dec.Decode(&header.Season); err != nil {
+				return GameHeader{}, nil, fmt.Errorf("parse %s season: %w", path, err)
+			}
 		case "plays":
 			// Consume '['.
 			if _, err := dec.Token(); err != nil {

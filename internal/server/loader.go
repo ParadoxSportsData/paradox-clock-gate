@@ -122,6 +122,9 @@ func (c *GameCache) ListGames() ([]GameSummary, error) {
 			HomeScore: finalState.HomeScore,
 			AwayScore: finalState.AwayScore,
 			Duration:  sm.Meta.MaxTick,
+			GameDate:  sm.Meta.GameDate,
+			Week:      sm.Meta.Week,
+			Season:    sm.Meta.Season,
 		})
 	}
 
