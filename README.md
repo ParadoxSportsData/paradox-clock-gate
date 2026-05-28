@@ -3,7 +3,7 @@
 Answer "what was the exact game state at elapsed second T?" for any NFL game in O(1) time, with a mathematical guarantee that no data from after tick T influences the result.
 
 ```
-$ clock-gate --tick 1800 testdata/2011_01_NO_GB.json
+$ clock-gate --tick 1800 data/raw/2011_01_NO_GB.json
 
 ┌────────────────────────────────────────────────────────────┐
 │  NO @ GB   │  Q3  │  Elapsed: 1800s (30:00)            │
@@ -23,10 +23,30 @@ GB up 28–17 at the half, Rodgers and the defending Super Bowl champions would 
 ## Prerequisites
 
 - Go 1.26.3 or later (`go version` to check)
+- Python 3.12 + pip (for the data fetch script)
 
-That's it. Three curated sample games ship in `testdata/` — no external data required for CLI demos.
+---
 
-> **Full dataset (serve mode):** The serve mode defaults to `../paradox-platform/data/raw` — 270 JSON game files. Clone [paradox-platform](https://github.com/ParadoxSportsData/paradox-platform) next to `paradox-clock-gate` to use the full 2011 season. The `testdata/` path works for CLI queries but serve mode will error if paradox-platform is not present at the expected relative path.
+## Data Setup
+
+Game data is not bundled in the repo. Run the fetch script once to download all seasons from nflverse:
+
+```bash
+cd paradox-clock-gate
+
+# Install Python dependencies (Python 3.12 required)
+pip install -r scripts/requirements.txt
+
+# Download all seasons (2011–2025) — takes 5–15 minutes on first run
+python3 scripts/fetch_games.py
+
+# Or limit to a single season for a quick start
+python3 scripts/fetch_games.py --seasons 2024 2024
+```
+
+This writes one JSON file per game to `data/raw/` (~4,100 files for the full 2011–2025 range). nfl_data_py caches downloads locally so subsequent runs are fast.
+
+---
 
 ## Install
 
@@ -37,19 +57,21 @@ git clone https://github.com/ParadoxSportsData/paradox-clock-gate
 cd paradox-clock-gate
 ```
 
-**Step 2 — Build**
+**Step 2 — Fetch game data** (see above)
+
+**Step 3 — Build**
 
 ```bash
 go build ./cmd/clock-gate/
 ```
 
-No external dependencies. Binary produced at `./clock-gate`.
+No external Go dependencies. Binary produced at `./clock-gate`.
 
-**Step 3 — Verify**
+**Step 4 — Verify**
 
 ```bash
 # Rodgers vs. the Saints, Week 1 2011 — halftime state
-./clock-gate --tick 1800 testdata/2011_01_NO_GB.json
+./clock-gate --tick 1800 data/raw/2011_01_NO_GB.json
 ```
 
 If you see a box-drawing table with score, quarter, and possession — setup is complete.
@@ -60,16 +82,6 @@ If you see a box-drawing table with score, quarter, and possession — setup is 
 go test ./...
 go test -bench=BenchmarkQuery -benchmem ./internal/matrix/
 ```
-
----
-
-## Sample games (`testdata/`)
-
-| File | Game | Result |
-|------|------|--------|
-| `2011_01_NO_GB.json` | NO @ GB, Week 1 2011 | GB 42 – NO 34 |
-| `2011_09_GB_SD.json` | GB @ SD, Week 9 2011 | GB 45 – SD 38 |
-| `2011_14_OAK_GB.json` | OAK @ GB, Week 14 2011 | GB 46 – OAK 16 |
 
 ---
 
@@ -90,25 +102,22 @@ clock-gate --list <directory>
 
 ```bash
 # Kickoff
-clock-gate --tick 0 testdata/2011_01_NO_GB.json
+clock-gate --tick 0 data/raw/2011_01_NO_GB.json
 
 # Halftime (1800s = 30:00 elapsed)
-clock-gate --tick 1800 testdata/2011_01_NO_GB.json
+clock-gate --tick 1800 data/raw/2011_01_NO_GB.json
 
 # Late game
-clock-gate --tick 3500 testdata/2011_01_NO_GB.json
+clock-gate --tick 3500 data/raw/2011_01_NO_GB.json
 
 # JSON output, end of Q1
-clock-gate --tick 900 --format json testdata/2011_01_NO_GB.json
+clock-gate --tick 900 --format json data/raw/2011_01_NO_GB.json
 
 # Query past game end — returns a bounded error
-clock-gate --tick 999999 testdata/2011_01_NO_GB.json
+clock-gate --tick 999999 data/raw/2011_01_NO_GB.json
 
-# List available games
-clock-gate --list testdata/
-
-# Different game — road shootout at San Diego
-clock-gate --tick 1800 testdata/2011_09_GB_SD.json
+# List available games in a season
+clock-gate --list data/raw/
 ```
 
 ### Serve mode (HTTP API)
@@ -120,14 +129,14 @@ clock-gate --tick 1800 testdata/2011_09_GB_SD.json
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--port` | `8080` | Port to listen on |
-| `--data` | `../paradox-platform/data/raw` | Directory of game JSON files |
+| `--data` | `./data/raw` | Directory of game JSON files |
 
 ```bash
-# Start with full 2011 dataset (default — requires paradox-platform cloned next to this repo)
+# Start with full dataset (after running scripts/fetch_games.py)
 ./clock-gate serve
 
-# Start with bundled testdata only
-./clock-gate serve --data ./testdata
+# Start with a single season
+./clock-gate serve --data ./data/raw
 ```
 
 Endpoints served:
@@ -245,7 +254,7 @@ flowchart LR
     Response --> Users
 ```
 
-One pre-compiled StateMatrix per game, shared across all concurrent users watching that game. O(1) query with no GC pressure on the hot path — the design scales to high concurrent read load without evolution.
+One pre-compiled StateMatrix per game, shared across all concurrent users watching that game. O(1) query with no GC pressure on the hot path.
 
 ---
 
@@ -278,7 +287,7 @@ Each game file is a JSON wrapper object:
 
 Home/away teams are read from the JSON header fields — not from the filename. The parser uses token-mode `json.Decoder` to stream play objects one at a time without loading the full file into memory.
 
-`game_clock_total_seconds` is the primary index field — pre-computed elapsed seconds since kickoff. Max observed value across 270 2011-season games: 4,500 (OT confirmed). `MaxTick = 9001` provides safe headroom.
+`game_clock_total_seconds` is the primary index field — pre-computed elapsed seconds since kickoff. Max observed value across the full dataset: 4,500 (OT confirmed). `MaxTick = 9001` provides safe headroom.
 
 ---
 
@@ -293,7 +302,7 @@ Home/away teams are read from the JSON header fields — not from the filename. 
 | WinProb | `uint16` (× 10000) | GC-free struct; 0.01% precision sufficient |
 | Team abbreviations | `[3]byte` | Eliminates GC-visible pointer |
 | Description storage | Arena + offset/length | One alloc at compile time |
-| Phase 2A backend | `net/http` stdlib | Same zero-dep rationale as `flag` |
+| HTTP backend | `net/http` stdlib | Same zero-dep rationale as `flag` |
 
 ---
 
