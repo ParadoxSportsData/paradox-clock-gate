@@ -24,9 +24,9 @@ GB up 28–17 at the half, Rodgers and the defending Super Bowl champions would 
 
 - Go 1.26.3 or later (`go version` to check)
 
-That's it. Three curated sample games ship with the repo in `testdata/` — no external data source required for development or demos.
+That's it. Three curated sample games ship in `testdata/` — no external data required for CLI demos.
 
-> **Full dataset:** The broader ParadoxSportsData platform will handle data distribution for the full game library (current and historical seasons). `testdata/` is the development and demo path; production data loading is handled separately from this repo.
+> **Full dataset (serve mode):** The serve mode defaults to `../paradox-platform/data/raw` — 270 JSON game files. Clone [paradox-platform](https://github.com/ParadoxSportsData/paradox-platform) next to `paradox-clock-gate` to use the full 2011 season. The `testdata/` path works for CLI queries but serve mode will error if paradox-platform is not present at the expected relative path.
 
 ## Install
 
@@ -120,14 +120,14 @@ clock-gate --tick 1800 testdata/2011_09_GB_SD.json
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--port` | `8080` | Port to listen on |
-| `--data` | `./testdata` | Directory of game JSON files |
+| `--data` | `../paradox-platform/data/raw` | Directory of game JSON files |
 
 ```bash
-# Start with bundled testdata
+# Start with full 2011 dataset (default — requires paradox-platform cloned next to this repo)
 ./clock-gate serve
 
-# Start with full 2011 dataset
-./clock-gate serve --data ../paradox-platform/data/raw/
+# Start with bundled testdata only
+./clock-gate serve --data ./testdata
 ```
 
 Endpoints served:
@@ -224,24 +224,25 @@ graph TD
     matrix["internal/matrix\nCompile, GameState, StateMatrix"]
     gate["internal/gate\nValidate"]
     presenter["internal/presenter\nRenderText, RenderJSON"]
+    server["internal/server\nGameCache, HTTP handlers"]
 
     main --> ingestion
     main --> matrix
     main --> gate
     main --> presenter
+    main --> server
+    server --> matrix
 ```
 
-### Serve mode — future state (Phase 2A)
+### Serve mode — concurrent access model
 
 ```mermaid
 flowchart LR
-    Users["N concurrent users\nwatching game X"] --> HTTP["HTTP GET\n/game/:id/state?tick=T"]
-    HTTP --> Server["clock-gate serve\n(future)"]
+    Users["N concurrent users\nwatching game X"] --> HTTP["HTTP GET\n/games/:id/state?tick=T"]
+    HTTP --> Server["clock-gate serve"]
     Server --> Cache["StateMatrix cache\none per game"]
     Cache -->|"States[T] — O(1)\nno new allocations"| Response["JSON response"]
     Response --> Users
-    style Server stroke-dasharray: 5 5
-    style Cache stroke-dasharray: 5 5
 ```
 
 One pre-compiled StateMatrix per game, shared across all concurrent users watching that game. O(1) query with no GC pressure on the hot path — the design scales to high concurrent read load without evolution.
