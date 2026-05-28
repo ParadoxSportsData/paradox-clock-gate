@@ -47,7 +47,8 @@ type GameMeta struct {
 }
 
 type StateMatrix struct {
-	States [MaxTick]GameState
-	Arena  []byte // all descriptions concatenated (one alloc at init)
-	Meta   GameMeta
+	States    [MaxTick]GameState
+	Arena     []byte   // all descriptions concatenated (one alloc at init)
+	Meta      GameMeta
+	PlayTicks []uint16 // ticks with real plays, sorted ascending; excludes forward-filled ticks
 }

@@ -156,11 +156,13 @@ The `state` response shape is identical to CLI `--format json` output. All reque
   "away_score": 7,
   "posteam": "NO",
   "defteam": "GB",
-  "win_prob": 0.1645,
+  "win_prob": 0.8355,
   "has_state": true,
   "play_description": "(15:00) 23-P.Thomas up the middle to NO 40 for 2 yards (90-B.Raji, 42-M.Burnett)."
 }
 ```
+
+`win_prob` is always the **home team's** win probability (0.0–1.0). The raw nflfastR `wp` field is possession-team WP; the compiler normalizes it at build time so all consumers receive a consistent home-team perspective regardless of who has the ball.
 
 ---
 
