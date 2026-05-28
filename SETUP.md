@@ -1,34 +1,33 @@
-# ParadoxSportsData — Full Stack Setup
+# ParadoxSportsData — Setup Guide
 
-This guide brings up all five services end-to-end: the Go temporal engine, the Python stats and prediction services, and the React UI.
+Runs the full stack: temporal engine, stats, win-probability prediction, and the React UI.
 
 ---
 
 ## Repos
 
-| Service | Repo | Port |
-|---------|------|------|
-| [paradox-clock-gate](https://github.com/ParadoxSportsData/paradox-clock-gate) | Go HTTP server + CLI | 8080 |
-| [paradox-stats](https://github.com/ParadoxSportsData/paradox-stats) | Python box-score service | 8001 |
-| [paradox-predict](https://github.com/ParadoxSportsData/paradox-predict) | Python WP prediction service | 8002 |
-| [paradox-ui](https://github.com/ParadoxSportsData/paradox-ui) | React + TypeScript frontend | 5173 |
+| Repo | Port |
+|------|------|
+| [paradox-clock-gate](https://github.com/ParadoxSportsData/paradox-clock-gate) | 8080 |
+| [paradox-stats](https://github.com/ParadoxSportsData/paradox-stats) | 8001 |
+| [paradox-predict](https://github.com/ParadoxSportsData/paradox-predict) | 8002 |
+| [paradox-ui](https://github.com/ParadoxSportsData/paradox-ui) | 5173 |
 
 ---
 
 ## Prerequisites
 
-| Tool | Required | Check |
-|------|----------|-------|
-| Go 1.26.3+ | paradox-clock-gate | `go version` |
-| Python 3.14 | paradox-predict | `python3.14 --version` |
-| Python 3.12 | paradox-stats | `python3.12 --version` |
-| Node.js 20+ | paradox-ui | `node --version` |
-| libomp (macOS) | paradox-predict (XGBoost) | `brew install libomp` |
+- Go 1.26.3+ — [go.dev/dl](https://go.dev/dl/)
+- Python 3.14 — for paradox-predict
+- Python 3.12 — for paradox-stats
+- Node.js 20+
+- macOS only: `brew install libomp` (required by XGBoost)
 
 ---
 
-## Step 1 — Clone all repos
+## One-time setup
 
+**1. Clone**
 ```bash
 git clone https://github.com/ParadoxSportsData/paradox-clock-gate
 git clone https://github.com/ParadoxSportsData/paradox-stats
@@ -36,150 +35,58 @@ git clone https://github.com/ParadoxSportsData/paradox-predict
 git clone https://github.com/ParadoxSportsData/paradox-ui
 ```
 
----
-
-## Step 2 — Download NFL game data
-
-Game data is fetched from nflverse and is not included in the repo (~4,100 files, ~400MB for all seasons).
-
+**2. Download game data** (5–15 min first run; cached after)
 ```bash
 cd paradox-clock-gate
-
-# Install Python dependencies (Python 3.12 required for the fetch script)
 pip install -r scripts/requirements.txt
-
-# Download all seasons 2011–2025 (5–15 min on first run; cached on subsequent runs)
 python3 scripts/fetch_games.py
-
-# Or a single season for a quick start
-python3 scripts/fetch_games.py --seasons 2024 2024
 ```
 
-This writes one JSON file per game to `data/raw/`.
-
----
-
-## Step 3 — Build and start paradox-clock-gate (port 8080)
-
+**3. Build clock-gate**
 ```bash
-cd paradox-clock-gate
 go build ./cmd/clock-gate/
-./clock-gate serve
 ```
 
-Verify:
+**4. Install Python dependencies**
 ```bash
-curl http://localhost:8080/health
-# → {"status":"ok"}
+# paradox-stats
+cd ../paradox-stats && python3.12 -m venv .venv && .venv/bin/pip install -e .
 
-curl http://localhost:8080/games | head -c 200
-# → JSON array of game objects
+# paradox-predict
+cd ../paradox-predict && python3.14 -m venv venv && venv/bin/pip install -e .
 ```
 
----
-
-## Step 4 — Start paradox-stats (port 8001)
-
+**5. Install UI dependencies**
 ```bash
-cd paradox-stats
-python3.12 -m venv .venv
-.venv/bin/pip install -e .
-.venv/bin/uvicorn main:app --port 8001
-```
-
-Verify:
-```bash
-curl http://localhost:8001/health
-# → {"status":"ok","service":"paradox-stats"}
+cd ../paradox-ui && npm install
 ```
 
 ---
 
-## Step 5 — Start paradox-predict (port 8002)
-
-The trained model (`ml/model.pkl`) is included in the repo — no training step required.
+## Run (4 terminals)
 
 ```bash
-# macOS only: install OpenMP runtime required by XGBoost
-brew install libomp
-
-cd paradox-predict
-python3.14 -m venv venv
-venv/bin/pip install -e .
-venv/bin/uvicorn main:app --port 8002
-```
-
-Verify:
-```bash
-curl http://localhost:8002/health
-# → {"status":"ok","service":"paradox-predict","model_loaded":true}
-
-# 4th & 1 from the 1, down 4, 10s left, Q4 — expect ~15% WP
-curl -s -X POST http://localhost:8002/predict/scenario \
-  -H "Content-Type: application/json" \
-  -d '{"down":4,"distance":1,"yardline_100":1,"quarter":4,"seconds_remaining_quarter":10,"score_differential":-4,"is_home_possession":true,"era_season":2024,"era_week":1}'
-```
-
----
-
-## Step 6 — Start paradox-ui (port 5173)
-
-```bash
-cd paradox-ui
-npm install
-npm run dev
-```
-
-Open [http://localhost:5173](http://localhost:5173).
-
-Select a game → scrub the timeline → stats panels and win probability update live.
-
----
-
-## Running all services at once
-
-Each service runs in its own terminal. Open four tabs:
-
-```bash
-# Tab 1
+# Terminal 1 — clock-gate
 cd paradox-clock-gate && ./clock-gate serve
 
-# Tab 2
+# Terminal 2 — stats
 cd paradox-stats && .venv/bin/uvicorn main:app --port 8001
 
-# Tab 3
+# Terminal 3 — prediction
 cd paradox-predict && venv/bin/uvicorn main:app --port 8002
 
-# Tab 4
+# Terminal 4 — UI
 cd paradox-ui && npm run dev
 ```
 
----
-
-## UI without a backend (mock mode)
-
-paradox-ui ships with fixture data for offline development:
-
-```bash
-cd paradox-ui
-VITE_MOCK_MODE=true npm run dev
-```
+Open **[http://localhost:5173](http://localhost:5173)**.
 
 ---
 
 ## Troubleshooting
 
-**`ml/model.pkl: No such file or directory` in paradox-predict**
-The model is committed to the repo — run `git pull` to get it.
-
-**`library not loaded: @rpath/libomp.dylib` (macOS)**
-Run `brew install libomp` and restart the uvicorn process.
-
-**`nfl_data_py` install fails on Python 3.13+**
-The fetch script requires Python 3.12. Use `python3.12 -m pip install -r scripts/requirements.txt`. paradox-predict uses 3.14 but does not depend on nfl_data_py.
-
-**`go: command not found`**
-Install Go 1.26.3 from [go.dev/dl](https://go.dev/dl/).
-
-**Clock-gate returns `tick out of range`**
-The requested tick exceeds the game's last play. Use `--list data/raw/` to see available games and query within a valid range.
+| Symptom | Fix |
+|---------|-----|
+| `library not loaded: @rpath/libomp.dylib` | `brew install libomp` |
+| `nfl_data_py` install fails | Use Python 3.12 for the fetch script only |
+| Stats or Lab panels show empty | Check that services on 8001 and 8002 are running |
