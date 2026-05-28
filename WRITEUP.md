@@ -10,9 +10,7 @@ The use case: a user is watching a recorded NFL game on a streaming service — 
 
 That experience depends on one primitive: given elapsed second T, return the exact game state that was true at T — nothing from after it, nothing missing from before it.
 
-The `paradox-platform` Python PoC proved the concept: index NFL play-by-play data by `game_clock_total_seconds` and answer "what was the game state at moment T?" But it had real technical debt — linear scans, N+1 queries, hardcoded localhost URLs, and no temporal isolation guarantee (a bug could let future-play data bleed into historical queries). The core innovation deserved a clean implementation.
-
-`clock-gate` extracts and perfects that one mechanism: the forward-fill compiler makes the temporal isolation guarantee mathematical rather than conventional. There is no code path by which a play at tick T+1 can affect the result returned for tick T.
+`clock-gate` is that primitive: a forward-fill compiler that makes the temporal isolation guarantee mathematical rather than conventional. There is no code path by which a play at tick T+1 can affect the result returned for tick T.
 
 `ParadoxSportsData` — the GitHub org this lives under — is a deliberate platform foundation, not a one-product account. Clock-gate is the first artifact: the temporal query engine that every future product in the org depends on. The rewind league, the momentum engine, the injury-aware simulation — all of those require accurate point-in-time game state as a primitive. You build that once, correctly, and everything else composes on top of it.
 
@@ -36,7 +34,7 @@ Using AI as a core workflow tool doesn't mean turning it loose. Before writing a
 
 **Principle of least privilege.** The project `.claude/settings.json` contains an explicit `toolApprovals` allowlist: the exact Bash commands the agent is permitted to run without prompting. Nothing outside that list runs silently. This is not a default — it's a deliberate access control decision, documented and auditable.
 
-**Scope isolation.** A PreToolUse hook warns if the agent attempts to write or modify files outside the `paradox-clock-gate/` project root. The sibling repository (`../paradox-platform`) is live data I care about. The agent cannot touch it by accident.
+**Scope isolation.** A PreToolUse hook warns if the agent attempts to write or modify files outside the `paradox-clock-gate/` project root. The agent cannot touch sibling repositories by accident.
 
 **Architectural constraint enforcement.** Two of the core technical claims — zero external dependencies and zero query-time allocations — are enforced at the infrastructure level, not just by convention. A PostToolUse hook on `go.mod`-touching commands warns if an external dependency appears. The benchmark capture hook flags immediately if `allocs/op` is non-zero. The constraints are machine-verified, not trust-based.
 
