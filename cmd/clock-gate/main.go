@@ -1,3 +1,4 @@
+// Package main is the clock-gate CLI entry point for temporal NFL game-state queries.
 package main
 
 import (

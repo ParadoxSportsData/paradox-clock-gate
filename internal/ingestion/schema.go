@@ -1,3 +1,5 @@
+// Package ingestion parses NFL play-by-play JSON files into typed structs for
+// downstream compilation into a StateMatrix.
 package ingestion
 
 // GameHeader holds the top-level wrapper fields parsed before the plays array.
