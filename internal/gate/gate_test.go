@@ -2,38 +2,26 @@ package gate
 
 import "testing"
 
-func TestValidateNegativeTick(t *testing.T) {
-	err := Validate(-1, 3600)
-	if err == nil {
-		t.Fatal("expected error for negative tick, got nil")
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		tick    int
+		maxTick uint16
+		wantErr bool
+	}{
+		{"valid kickoff", 0, 3600, false},
+		{"valid mid-game", 1800, 3600, false},
+		{"valid at maxTick", 3600, 3600, false},
+		{"negative tick", -1, 3600, true},
+		{"tick exceeds maxTick by one", 3601, 3600, true},
+		{"tick far exceeds maxTick", 999999, 3600, true},
 	}
-}
-
-func TestValidateZeroTick(t *testing.T) {
-	// Tick 0 is valid — kickoff state.
-	err := Validate(0, 3600)
-	if err != nil {
-		t.Fatalf("expected no error for tick 0, got: %v", err)
-	}
-}
-
-func TestValidateTickAtMaxTick(t *testing.T) {
-	err := Validate(3600, 3600)
-	if err != nil {
-		t.Fatalf("expected no error for tick == maxTick, got: %v", err)
-	}
-}
-
-func TestValidateTickExceedsMaxTick(t *testing.T) {
-	err := Validate(3601, 3600)
-	if err == nil {
-		t.Fatal("expected error for tick > maxTick, got nil")
-	}
-}
-
-func TestValidateTickFarExceedsMaxTick(t *testing.T) {
-	err := Validate(999999, 3600)
-	if err == nil {
-		t.Fatal("expected error for tick 999999, got nil")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := Validate(tc.tick, tc.maxTick)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("Validate(%d, %d) error = %v, wantErr %v", tc.tick, tc.maxTick, err, tc.wantErr)
+			}
+		})
 	}
 }

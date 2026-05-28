@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/ParadoxSportsData/paradox-clock-gate/internal/server"
 )
@@ -29,26 +30,17 @@ func runServe(args []string) {
 
 	cache := server.NewGameCache(*dataDir)
 	mux := server.NewServeMux(cache)
-	handler := corsMiddleware(mux)
 
 	addr := fmt.Sprintf(":%d", *port)
 	fmt.Printf("clock-gate serve listening on %s\n", addr)
-	if err := http.ListenAndServe(addr, handler); err != nil {
+	srv := &http.Server{
+		Addr:         addr,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// corsMiddleware wraps an http.Handler to add CORS headers on every response
-// and handle OPTIONS preflight requests with a 204 No Content.
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }

@@ -1,3 +1,5 @@
+// Package presenter renders GameState values as human-readable text boxes or
+// JSON for CLI output.
 package presenter
 
 import (
@@ -32,7 +34,7 @@ func RenderText(gs matrix.GameState, meta matrix.GameMeta, arena []byte) string 
 
 	// Win probability — relative to posteam.
 	wpStr := ""
-	if gs.WinProb != 65535 {
+	if gs.WinProb != matrix.WinProbNull {
 		wpPct := float64(gs.WinProb) / 100.0
 		wpStr = fmt.Sprintf("  Win Prob: %s %.1f%%", posteam, wpPct)
 	}
@@ -102,8 +104,8 @@ func RenderJSON(gs matrix.GameState, meta matrix.GameMeta, arena []byte) string 
 		Defteam:   teamStr(gs.Defteam),
 		HasState:  gs.HasState,
 	}
-	if gs.WinProb != 65535 {
-		v := float64(gs.WinProb) / 10000.0
+	if gs.WinProb != matrix.WinProbNull {
+		v := float64(gs.WinProb) / float64(matrix.WinProbScale)
 		js.WinProb = &v
 	}
 	if gs.HasState && int(gs.DescOffset)+int(gs.DescLen) <= len(arena) {

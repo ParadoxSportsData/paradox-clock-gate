@@ -1,6 +1,13 @@
+// Package matrix defines the core data types and state-matrix structure for
+// O(1) temporal game-state queries.
 package matrix
 
 const MaxTick = 9001 // covers regulation (3600s) + up to ~3 OT periods
+
+const (
+	WinProbNull  uint16 = 65535 // sentinel: no win probability data available
+	WinProbScale uint16 = 10000 // multiply float wp by WinProbScale before storing as uint16
+)
 
 type PlayType uint8
 
@@ -24,7 +31,7 @@ type GameState struct {
 	HomeScore  uint8
 	AwayScore  uint8
 	PlayType   PlayType
-	WinProb    uint16  // wp * 10000 (e.g., 0.583 → 5830); 65535 = null
+	WinProb    uint16  // wp * WinProbScale (e.g., 0.583 → 5830); WinProbNull = no data
 	Posteam    [3]byte // null-padded e.g. "CHI"
 	Defteam    [3]byte
 	DescOffset uint32

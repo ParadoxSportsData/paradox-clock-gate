@@ -1,3 +1,5 @@
+// Package gate validates tick values against compiled game boundaries to prevent
+// out-of-range temporal queries.
 package gate
 
 import "fmt"
