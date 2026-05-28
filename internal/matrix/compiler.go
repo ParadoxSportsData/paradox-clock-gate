@@ -67,9 +67,9 @@ func Compile(plays []ingestion.RawPlay, header ingestion.GameHeader) StateMatrix
 			} else if wp > 1 {
 				wp = 1
 			}
-			gs.WinProb = uint16(wp * 10000)
+			gs.WinProb = uint16(wp * float64(WinProbScale))
 		} else {
-			gs.WinProb = 65535 // null sentinel
+			gs.WinProb = WinProbNull // null sentinel
 		}
 
 		if p.Posteam != nil {

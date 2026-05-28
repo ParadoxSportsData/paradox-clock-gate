@@ -47,12 +47,13 @@ func TestRenderTextContainsTeams(t *testing.T) {
 
 func TestRenderTextContainsScore(t *testing.T) {
 	gs, meta, arena := makeTestState()
+	// makeTestState sets HomeScore=14, AwayScore=7.
 	out := RenderText(gs, meta, arena)
-	if !strings.Contains(out, "7") {
-		t.Error("RenderText output must contain home score 7")
+	if !strings.Contains(out, "14") {
+		t.Errorf("RenderText output must contain home score 14; got:\n%s", out)
 	}
-	if !strings.Contains(out, "3") {
-		t.Error("RenderText output must contain away score 3")
+	if !strings.Contains(out, "7") {
+		t.Errorf("RenderText output must contain away score 7; got:\n%s", out)
 	}
 }
 
@@ -110,9 +111,9 @@ func TestRenderJSONContainsFields(t *testing.T) {
 
 func TestRenderJSONNullWinProb(t *testing.T) {
 	gs, meta, arena := makeTestState()
-	gs.WinProb = 65535 // null sentinel
+	gs.WinProb = matrix.WinProbNull // null sentinel
 	out := RenderJSON(gs, meta, arena)
 	if !strings.Contains(out, "null") {
-		t.Error("RenderJSON with WinProb=65535 must render win_prob as null")
+		t.Error("RenderJSON with WinProbNull must render win_prob as null")
 	}
 }

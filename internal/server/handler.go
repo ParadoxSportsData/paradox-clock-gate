@@ -1,3 +1,5 @@
+// Package server implements the HTTP REST API for clock-gate, exposing game
+// state and timeline endpoints backed by an in-memory GameCache.
 package server
 
 import (
@@ -213,12 +215,12 @@ func nullableTeam(b [3]byte) *string {
 }
 
 // nullableWinProb converts the uint16 WinProb sentinel to *float64.
-// 65535 is the null sentinel — returns nil. Otherwise wp/10000.
+// matrix.WinProbNull is the null sentinel — returns nil. Otherwise wp/WinProbScale.
 func nullableWinProb(wp uint16) *float64 {
-	if wp == 65535 {
+	if wp == matrix.WinProbNull {
 		return nil
 	}
-	v := float64(wp) / 10000.0
+	v := float64(wp) / float64(matrix.WinProbScale)
 	return &v
 }
 
