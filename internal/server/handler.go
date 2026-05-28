@@ -103,7 +103,11 @@ func handleState(cache *GameCache) http.HandlerFunc {
 	}
 }
 
-// handleTimeline returns all HasState ticks as a sorted PlaySnapshot slice.
+// handleTimeline returns one PlaySnapshot per distinct play (not per tick).
+// The StateMatrix forward-fills every tick with the current play state, so
+// iterating all ticks produces thousands of duplicate entries. We emit a new
+// entry only when the play state actually changes: description, quarter, down,
+// or score — any change means a new play has started.
 func handleTimeline(cache *GameCache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		gameID := extractGameID(r.URL.Path, "/timeline")
@@ -119,11 +123,35 @@ func handleTimeline(cache *GameCache) http.HandlerFunc {
 		}
 
 		plays := make([]PlaySnapshot, 0, 200)
+		var (
+			prevDescOffset uint32
+			prevDescLen    uint16
+			prevQuarter    uint8
+			prevDown       uint8
+			prevHomeScore  uint8
+			prevAwayScore  uint8
+		)
 		for t := 0; t <= int(sm.Meta.MaxTick); t++ {
 			gs := sm.States[t]
 			if !gs.HasState {
 				continue
 			}
+			// Skip forward-filled duplicate ticks — emit only when play changes.
+			if len(plays) > 0 &&
+				gs.DescOffset == prevDescOffset &&
+				gs.DescLen == prevDescLen &&
+				gs.Quarter == prevQuarter &&
+				gs.Down == prevDown &&
+				gs.HomeScore == prevHomeScore &&
+				gs.AwayScore == prevAwayScore {
+				continue
+			}
+			prevDescOffset = gs.DescOffset
+			prevDescLen = gs.DescLen
+			prevQuarter = gs.Quarter
+			prevDown = gs.Down
+			prevHomeScore = gs.HomeScore
+			prevAwayScore = gs.AwayScore
 			plays = append(plays, PlaySnapshot{
 				Tick:        gs.Elapsed,
 				Quarter:     gs.Quarter,
