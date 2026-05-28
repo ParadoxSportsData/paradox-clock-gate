@@ -16,7 +16,7 @@ import (
 func runServe(args []string) {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	port := fs.Int("port", 8080, "port to listen on")
-	dataDir := fs.String("data", "./testdata", "directory containing game JSON files")
+	dataDir := fs.String("data", "../paradox-platform/data/raw", "directory containing game JSON files")
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "serve: %v\n", err)
 		os.Exit(1)
