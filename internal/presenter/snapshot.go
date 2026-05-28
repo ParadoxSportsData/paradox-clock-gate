@@ -32,11 +32,11 @@ func RenderText(gs matrix.GameState, meta matrix.GameMeta, arena []byte) string 
 		downStr = fmt.Sprintf(" │  %s & %d  at %s %d", ordinal(gs.Down), gs.YardsToGo, posteam, gs.YardLine)
 	}
 
-	// Win probability — relative to posteam.
+	// Win probability — home team perspective (normalized at compile time).
 	wpStr := ""
 	if gs.WinProb != matrix.WinProbNull {
 		wpPct := float64(gs.WinProb) / 100.0
-		wpStr = fmt.Sprintf("  Win Prob: %s %.1f%%", posteam, wpPct)
+		wpStr = fmt.Sprintf("  Win Prob: %s %.1f%%", meta.HomeTeam, wpPct)
 	}
 
 	// Play description from arena.

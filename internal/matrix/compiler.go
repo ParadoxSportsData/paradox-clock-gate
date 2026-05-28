@@ -28,14 +28,22 @@ func Compile(plays []ingestion.RawPlay, header ingestion.GameHeader) StateMatrix
 	m.Meta.GameID = header.GameID
 	m.Meta.HomeTeam = header.HomeTeam
 	m.Meta.AwayTeam = header.AwayTeam
+	m.PlayTicks = make([]uint16, 0, len(plays))
 
 	var maxTick int
+	lastTick := -1
 
 	// Step 3: write each play into States[tick].
 	for _, p := range plays {
 		tick := p.GameClockTotalSeconds
 		if tick < 0 || tick >= MaxTick {
 			continue
+		}
+		// Record each distinct tick once (plays sorted ASC by tick; consecutive
+		// same-tick entries are adjacent and the last overwrites States[tick]).
+		if tick != lastTick {
+			m.PlayTicks = append(m.PlayTicks, uint16(tick))
+			lastTick = tick
 		}
 
 		gs := GameState{
@@ -66,6 +74,10 @@ func Compile(plays []ingestion.RawPlay, header ingestion.GameHeader) StateMatrix
 				wp = 0
 			} else if wp > 1 {
 				wp = 1
+			}
+			// Raw wp is possession-team WP; normalize to home-team perspective.
+			if p.Posteam != nil && *p.Posteam != header.HomeTeam {
+				wp = 1.0 - wp
 			}
 			gs.WinProb = uint16(wp * float64(WinProbScale))
 		} else {
