@@ -17,19 +17,17 @@ Runs the full stack: temporal engine, stats, win-probability prediction, and the
 
 ## Prerequisites
 
-Install these before starting. Each has a verify command to confirm it's ready.
+Install these before starting.
 
-| Dependency | Required for | Install | Verify |
-|---|---|---|---|
-| Go 1.26.3+ | paradox-clock-gate | [go.dev/dl](https://go.dev/dl/) | `go version` |
-| Python 3.12 | paradox-stats, game data fetch | [python.org/downloads](https://www.python.org/downloads/) | `python3.12 --version` |
-| Python 3.14 | paradox-predict | [python.org/downloads](https://www.python.org/downloads/) | `python3.14 --version` |
-| Node.js 20+ | paradox-ui | [nodejs.org](https://nodejs.org/) | `node --version` |
-| libomp *(macOS only)* | paradox-predict (XGBoost) | `brew install libomp` | — |
+- **Go 1.26.3+** — [go.dev/dl](https://go.dev/dl/) — verify with `go version`
+- **Python 3.12** — [python.org/downloads](https://www.python.org/downloads/) — verify with `python3.12 --version`
+- **Python 3.14** — [python.org/downloads](https://www.python.org/downloads/) — verify with `python3.14 --version`
+- **Node.js 20+** — [nodejs.org](https://nodejs.org/) — verify with `node --version`
+- **libomp** *(macOS only)* — `brew install libomp`
 
-> **macOS:** Install libomp before setting up paradox-predict. XGBoost will install without it but fail at runtime.
+Both Python versions are required. Python 3.12 is used for paradox-stats and the game data fetch script. Python 3.14 is used for paradox-predict. Using the wrong version will cause install failures.
 
-> **Python versions:** Both 3.12 and 3.14 are required. 3.12 is used for paradox-stats and the game data fetch script. 3.14 is used for paradox-predict. Using the wrong version will cause install failures.
+On macOS, install libomp before setting up paradox-predict. XGBoost will install without it but fail at runtime.
 
 ---
 
