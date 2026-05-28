@@ -105,10 +105,18 @@ func (c *GameCache) ListGames() ([]GameSummary, error) {
 			continue
 		}
 
+		// Skip files whose internal game_id doesn't match the filename.
+		// Canonical game files always have a matching filename and JSON game_id.
+		// Sample or mis-named files (e.g. 2011_01_NO_GB_sample.json whose JSON
+		// contains game_id "2011_01_NO_GB") would otherwise create phantom duplicates.
+		if sm.Meta.GameID != gameID {
+			continue
+		}
+
 		// Final score comes from the state at MaxTick.
 		finalState := sm.States[sm.Meta.MaxTick]
 		summaries = append(summaries, GameSummary{
-			GameID:    sm.Meta.GameID,
+			GameID:    gameID,
 			HomeTeam:  sm.Meta.HomeTeam,
 			AwayTeam:  sm.Meta.AwayTeam,
 			HomeScore: finalState.HomeScore,
