@@ -11,6 +11,9 @@ type GameHeader struct {
 	AwayTeam  string `json:"away_team"`
 	HomeScore int    `json:"home_score"`
 	AwayScore int    `json:"away_score"`
+	GameDate  string `json:"game_date"` // ISO-8601 e.g. "2011-09-08T00:00:00"
+	Week      int    `json:"week"`
+	Season    int    `json:"season"`
 }
 
 type RawPlay struct {

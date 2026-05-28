@@ -7,6 +7,9 @@ type GameSummary struct {
 	HomeScore uint8  `json:"home_score"`
 	AwayScore uint8  `json:"away_score"`
 	Duration  uint16 `json:"duration"` // maxTick in seconds
+	GameDate  string `json:"game_date"` // ISO-8601 from source JSON
+	Week      int    `json:"week"`
+	Season    int    `json:"season"`
 }
 
 type GameStateResponse struct {

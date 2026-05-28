@@ -44,6 +44,9 @@ type GameMeta struct {
 	HomeTeam string
 	AwayTeam string
 	MaxTick  uint16
+	GameDate string // ISO-8601 from JSON header e.g. "2011-09-08T00:00:00"
+	Week     int
+	Season   int
 }
 
 type StateMatrix struct {

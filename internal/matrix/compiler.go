@@ -28,6 +28,9 @@ func Compile(plays []ingestion.RawPlay, header ingestion.GameHeader) StateMatrix
 	m.Meta.GameID = header.GameID
 	m.Meta.HomeTeam = header.HomeTeam
 	m.Meta.AwayTeam = header.AwayTeam
+	m.Meta.GameDate = header.GameDate
+	m.Meta.Week = header.Week
+	m.Meta.Season = header.Season
 	m.PlayTicks = make([]uint16, 0, len(plays))
 
 	var maxTick int
